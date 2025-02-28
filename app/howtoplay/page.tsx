@@ -9,14 +9,27 @@ export default function HowToPlayPage() {
   const [referrer, setReferrer] = useState<string | null>(null);
   
   useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
+    
     // Get the referrer from document.referrer or sessionStorage
     const docReferrer = document.referrer;
-    const storedReferrer = sessionStorage.getItem('howToPlayReferrer');
+    let storedReferrer = null;
+    
+    try {
+      storedReferrer = sessionStorage.getItem('howToPlayReferrer');
+    } catch (error) {
+      console.error('Error accessing sessionStorage:', error);
+    }
     
     // If coming from /play, store that as referrer
     if (docReferrer && docReferrer.includes('/play')) {
       setReferrer('/play');
-      sessionStorage.setItem('howToPlayReferrer', '/play');
+      try {
+        sessionStorage.setItem('howToPlayReferrer', '/play');
+      } catch (error) {
+        console.error('Error setting sessionStorage:', error);
+      }
     } else if (storedReferrer) {
       setReferrer(storedReferrer);
     } else {

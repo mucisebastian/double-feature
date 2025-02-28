@@ -183,7 +183,11 @@ export default function PlayPage() {
               onClick={() => {
                 // Store that we're coming from /play
                 if (typeof window !== 'undefined') {
-                  sessionStorage.setItem('howToPlayReferrer', '/play');
+                  try {
+                    sessionStorage.setItem('howToPlayReferrer', '/play');
+                  } catch (error) {
+                    console.error('Error setting sessionStorage:', error);
+                  }
                 }
                 router.push('/howtoplay');
               }}

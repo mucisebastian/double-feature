@@ -1,88 +1,87 @@
 import { useState, useEffect } from 'react';
+import { getLocalStorage, setLocalStorage } from '@/utils/localStorage';
 
 // Define the GameData interface
 export interface GameData {
   year: number;
+  date?: string;
   popularMovies?: string[];
   popularAlbums?: string[];
 }
 
-export const useGameData = (year?: number | null) => {
+export function useGameData(yearOverride?: number | null) {
   const [data, setData] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('useGameData effect running, year:', year);
+    console.log('useGameData effect running');
+    let isMounted = true;
     
-    // Immediately clear loading if we're in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode detected, ensuring loading state clears quickly');
-      const quickTimeout = setTimeout(() => {
-        if (loading) {
-          console.log('Force clearing loading state after quick timeout');
-          setLoading(false);
-          
-          // If we don't have data yet, create fallback data
-          if (!data) {
-            const fallbackYear = year || 1990;
-            console.log('Creating fallback data with year:', fallbackYear);
-            setData({ year: fallbackYear });
-          }
-        }
-      }, 1000); // Much shorter timeout for development
-      
-      return () => clearTimeout(quickTimeout);
-    }
-
-    // If we already have a year, use it directly
-    if (year) {
-      console.log('Using provided year:', year);
-      setData({ year });
-      setLoading(false);
-      return;
-    }
-
-    // Otherwise, get the daily year from localStorage or generate a new one
     const fetchData = async () => {
       try {
-        console.log('Fetching game data...');
-        // For now, generate a random year between 1970 and 2020
-        const randomYear = 1970 + Math.floor(Math.random() * 51);
-        console.log('Generated random year:', randomYear);
-        setData({ year: randomYear });
-      } catch (err) {
-        console.error('Error loading game data:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        // Critical fix - always clear loading state
-        console.log('Clearing loading state');
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-    
-    // Add a safety timeout to ensure loading state is cleared
-    const safetyTimeout = setTimeout(() => {
-      if (loading) {
-        console.log('Safety timeout triggered - forcing loading state to clear');
-        setLoading(false);
+        setLoading(true);
         
-        // If we still don't have data, create emergency fallback
-        if (!data) {
-          const emergencyYear = year || 2000;
-          console.log('Creating emergency fallback data with year:', emergencyYear);
-          setData({ year: emergencyYear });
+        // If we have a year override (e.g., from archive), use that
+        if (yearOverride) {
+          console.log('Using year override:', yearOverride);
+          if (isMounted) {
+            setData({ year: yearOverride });
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // Check for cached data first
+        const today = new Date().toISOString().split('T')[0];
+        const cachedData = getLocalStorage(`gameData_${today}`, null);
+        
+        if (cachedData) {
+          console.log('Using cached data:', cachedData);
+          if (isMounted) {
+            setData(cachedData);
+            setLoading(false);
+          }
+          return;
+        }
+        
+        // Generate a random year between 1960 and 2020
+        // In a real app, this would come from an API
+        const randomYear = Math.floor(Math.random() * (2020 - 1960 + 1)) + 1960;
+        console.log('Generated random year:', randomYear);
+        
+        const newData = { 
+          year: randomYear,
+          date: today
+        };
+        
+        // Cache the data
+        setLocalStorage(`gameData_${today}`, newData);
+        
+        if (isMounted) {
+          setData(newData);
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('Error in useGameData:', err);
+        if (isMounted) {
+          setError('Failed to load game data. Please try again.');
+          setLoading(false);
         }
       }
-    }, 3000); // Shorter timeout
+    };
+
+    // Add a timeout to ensure loading state is shown for at least a short time
+    // This prevents flickering UI and gives time for hydration
+    const timeoutId = setTimeout(() => {
+      fetchData();
+    }, 300);
     
     return () => {
-      console.log('Cleaning up useGameData effect');
-      clearTimeout(safetyTimeout);
+      isMounted = false;
+      clearTimeout(timeoutId);
     };
-  }, [year, loading, data]);
+  }, [yearOverride]);
 
   return { data, loading, error };
-}; 
+} 
