@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useReducer, useEffect } from 'react';
+import { useState, useCallback, useReducer, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -60,8 +60,9 @@ interface Guess {
   correct: boolean;
 }
 
-export default function PlayPage() {
-  console.log('PlayPage rendering');
+// Component that uses useSearchParams wrapped in Suspense
+function PlayContent() {
+  console.log('PlayContent rendering');
   const router = useRouter();
   const searchParams = useSearchParams();
   const archiveDate = searchParams.get('date');
@@ -74,7 +75,7 @@ export default function PlayPage() {
   // Force render after mount to ensure client-side data
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
-    console.log('PlayPage mounted');
+    console.log('PlayContent mounted');
     setIsMounted(true);
     
     // Force a re-render after a short delay if we're still loading
@@ -263,5 +264,14 @@ export default function PlayPage() {
         <GameInterface />
       )}
     </ErrorBoundary>
+  );
+}
+
+// Main page component with Suspense
+export default function PlayPage() {
+  return (
+    <Suspense fallback={<Loading timeout={3000} />}>
+      <PlayContent />
+    </Suspense>
   );
 } 
