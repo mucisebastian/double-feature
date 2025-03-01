@@ -14,6 +14,10 @@ import {
 import { format, parseISO } from 'date-fns';
 import { verifyYearUniqueness } from '@/utils/yearGenerator';
 
+// Key for storing the current challenge number
+const CHALLENGE_NUMBER_KEY = 'doubleFeature_challengeNumber';
+const LAST_YEAR_KEY = 'doubleFeature_lastYear';
+
 interface DailyYearResult {
   dailyYear: number | null;
   today: Date | null;
@@ -43,7 +47,12 @@ export const useDailyYear = (): DailyYearResult => {
         setIsLoading(true);
         
         // Check if we need to reset the daily challenge
-        checkDailyReset();
+        try {
+          checkDailyReset();
+        } catch (resetError) {
+          console.warn('Error during daily reset check:', resetError);
+          // Continue execution even if reset check fails
+        }
         
         // Get current date
         const currentDate = new Date();
@@ -58,14 +67,20 @@ export const useDailyYear = (): DailyYearResult => {
           setIsArchiveGame(true);
           setArchiveDate(dateParam);
           
-          if (yearParam) {
-            // If year is provided in URL, use it
-            setDailyYear(parseInt(yearParam));
-          } else {
-            // Otherwise, calculate it
-            const archiveDate = new Date(dateParam);
-            const year = getYearForDate(archiveDate);
-            setDailyYear(year);
+          try {
+            if (yearParam) {
+              // If year is provided in URL, use it
+              setDailyYear(parseInt(yearParam));
+            } else {
+              // Otherwise, calculate it
+              const archiveDate = new Date(dateParam);
+              const year = getYearForDate(archiveDate);
+              setDailyYear(year);
+            }
+          } catch (archiveError) {
+            console.error('Error getting archive year:', archiveError);
+            // Fallback to a default year for archive games
+            setDailyYear(2000);
           }
           
           // Set today to the archive date for display purposes
@@ -78,48 +93,103 @@ export const useDailyYear = (): DailyYearResult => {
           setIsArchiveGame(false);
           setArchiveDate(null);
           
-          // Perform daily validation check
-          const validationPassed = await performDailyValidation();
-          
-          if (!validationPassed) {
-            // If validation fails, show an error but continue with the game
-            console.error('Daily validation failed: Year may be a duplicate');
-            // We don't set an error message to avoid disrupting the user experience
+          // Perform daily validation check with error handling
+          try {
+            await performDailyValidation();
+          } catch (validationError) {
+            console.warn('Error during daily validation:', validationError);
+            // Continue execution even if validation fails
           }
           
-          // Get today's challenge year
-          const year = getTodaysYear();
+          // Get today's challenge year with fallback
+          let year;
+          try {
+            year = getTodaysYear();
+          } catch (yearError) {
+            console.error('Error getting today\'s year:', yearError);
+            // Fallback to a random year between 1970 and 2020
+            year = 1970 + Math.floor(Math.random() * 51);
+          }
           setDailyYear(year);
           
           // Validate that today's year doesn't exist in the archive
-          const archiveYears = getArchiveYears();
-          const isUnique = verifyYearUniqueness(year, archiveYears);
-          setIsYearUnique(isUnique);
-          
-          if (!isUnique) {
-            console.error('Today\'s year already exists in the archive!', year);
-            // We still show the game, but log the error
+          try {
+            const archiveYears = getArchiveYears();
+            const isUnique = verifyYearUniqueness(year, archiveYears);
+            setIsYearUnique(isUnique);
+            
+            if (!isUnique) {
+              console.error('Today\'s year already exists in the archive!', year);
+              // We still show the game, but log the error
+            }
+          } catch (uniqueError) {
+            console.warn('Error checking year uniqueness:', uniqueError);
+            // Assume it's unique if we can't check
+            setIsYearUnique(true);
           }
         }
         
         // Get archive data to determine challenge number
-        const archiveData = await getArchiveData();
+        let archiveData = [];
+        try {
+          archiveData = await getArchiveData();
+        } catch (archiveDataError) {
+          console.error('Error getting archive data:', archiveDataError);
+          // Continue with empty archive data
+        }
         
         // Calculate challenge number
         if (!isArchiveGame) {
-          // For today's challenge, it's the total number of challenges so far
-          setChallengeNumber(archiveData.length + 1);
+          // For today's challenge, use stored challenge number or default to 14
+          if (typeof window !== 'undefined') {
+            try {
+              const storedChallengeNumber = localStorage.getItem(CHALLENGE_NUMBER_KEY);
+              const storedLastYear = localStorage.getItem(LAST_YEAR_KEY);
+              
+              let currentChallengeNumber = storedChallengeNumber ? parseInt(storedChallengeNumber) : 14;
+              
+              // If the year has changed since last time, increment the challenge number
+              if (storedLastYear && storedLastYear !== String(year)) {
+                currentChallengeNumber += 1;
+                localStorage.setItem(CHALLENGE_NUMBER_KEY, String(currentChallengeNumber));
+              }
+              
+              // Store the current year for next comparison
+              localStorage.setItem(LAST_YEAR_KEY, String(year));
+              
+              setChallengeNumber(currentChallengeNumber);
+            } catch (storageError) {
+              console.error('Error accessing localStorage:', storageError);
+              // Fallback to default challenge number
+              setChallengeNumber(14);
+            }
+          } else {
+            // Fallback for SSR
+            setChallengeNumber(14);
+          }
         } else if (archiveDate) {
           // For archive challenges, find its position in the archive
-          const index = archiveData.findIndex(entry => entry.date === archiveDate);
-          if (index !== -1) {
-            setChallengeNumber(archiveData.length - index);
+          try {
+            const index = archiveData.findIndex(entry => entry.date === archiveDate);
+            if (index !== -1) {
+              setChallengeNumber(archiveData.length - index);
+            } else {
+              // Fallback if entry not found
+              setChallengeNumber(1);
+            }
+          } catch (indexError) {
+            console.error('Error finding archive index:', indexError);
+            // Fallback to challenge #1
+            setChallengeNumber(1);
           }
         }
         
         setIsLoading(false);
       } catch (err) {
         console.error('Error fetching daily year:', err);
+        // Set a fallback year and challenge number
+        setDailyYear(2000);
+        setChallengeNumber(14);
         setError('Failed to generate daily year. Please try again.');
         setIsLoading(false);
       }
