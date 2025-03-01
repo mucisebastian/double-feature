@@ -1,11 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import useDailyYear from '@/hooks/useDailyYear';
 import { formatDate } from '@/utils/dateUtils';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+// Force dynamic rendering to handle useSearchParams
+export const dynamicRendering = 'force-dynamic';
 
 export default function HomePage() {
+  return (
+    <ErrorBoundary fallback={
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white p-6 rounded-lg shadow-md text-center">
+          <h2 className="text-xl font-bold text-red-500 mb-4">Something went wrong</h2>
+          <p className="text-gray-700 mb-4">
+            We encountered an error while loading the page.
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-gray-900 text-white py-2 px-4 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    }>
+      <Suspense fallback={
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+          <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-gray-900 rounded-full"></div>
+        </div>
+      }>
+        <HomeContent />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+function HomeContent() {
   const { dailyYear, today, challengeNumber } = useDailyYear();
   const [timeUntilNext, setTimeUntilNext] = useState('');
   

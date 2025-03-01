@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useReducer } from 'react';
+import { useState, useEffect, useCallback, useReducer, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -10,9 +10,13 @@ import MovieSearch from '@/components/MovieSearch';
 import AlbumSearch from '@/components/AlbumSearch';
 import HowToPlay from '@/components/HowToPlay';
 import { format } from 'date-fns';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Only dynamically import ShareResults as it's only needed at the end of the game
 const ShareResults = dynamic(() => import('@/components/ShareResults'));
+
+// Force dynamic rendering to handle useSearchParams
+export const dynamicRendering = 'force-dynamic';
 
 // Game state types and reducer
 type GameState = {
@@ -214,6 +218,41 @@ const getPopularAlbums = (year: number): string[] => {
 };
 
 export default function PlayPage() {
+  return (
+    <ErrorBoundary fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="max-w-md w-full bg-white p-6 rounded-lg shadow-md text-center">
+          <h2 className="text-xl font-bold text-red-500 mb-4">Something went wrong</h2>
+          <p className="text-gray-700 mb-4">
+            We encountered an error while loading the game.
+          </p>
+          <Link 
+            href="/"
+            className="bg-gray-900 text-white py-2 px-4 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors inline-block"
+          >
+            Back to Home
+          </Link>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="ml-2 bg-white text-gray-800 py-2 px-4 rounded-full text-sm font-medium border border-gray-300 hover:bg-gray-100 transition-colors inline-block"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    }>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin h-8 w-8 border-t-2 border-b-2 border-gray-900 rounded-full" />
+        </div>
+      }>
+        <PlayContent />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+function PlayContent() {
   const searchParams = useSearchParams();
   const archiveDate = searchParams.get('date');
   const archiveYear = searchParams.get('year');
