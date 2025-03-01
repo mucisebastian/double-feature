@@ -70,7 +70,7 @@ export const useDailyYear = (): DailyYearResult => {
         const yearParam = searchParams?.get('year');
         
         // Variable to store the year for this challenge
-        let challengeYear: number;
+        let challengeYear: number = 2000; // Default fallback value
         
         if (dateParam) {
           // This is an archive game
@@ -219,4 +219,7 @@ export const useDailyYear = (): DailyYearResult => {
     archiveDate,
     isYearUnique
   };
-}; 
+};
+
+// Add default export to fix import issues
+export default useDailyYear; 

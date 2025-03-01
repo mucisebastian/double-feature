@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useDailyYear } from '@/hooks/useDailyYear';
+import useDailyYear from '@/hooks/useDailyYear';
 import { formatDate } from '@/utils/dateUtils';
 
 export default function HomePage() {

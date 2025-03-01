@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useReducer } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useDailyYear } from '@/hooks/useDailyYear';
+import useDailyYear from '@/hooks/useDailyYear';
 import { getPopularMedia } from '@/data/popularMedia';
 import MovieSearch from '@/components/MovieSearch';
 import AlbumSearch from '@/components/AlbumSearch';
