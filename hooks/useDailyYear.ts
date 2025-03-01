@@ -14,6 +14,13 @@ import {
 import { format, parseISO } from 'date-fns';
 import { verifyYearUniqueness } from '@/utils/yearGenerator';
 
+// Define the ArchiveEntry interface
+interface ArchiveEntry {
+  date: string;
+  year: number;
+  formattedDate: string;
+}
+
 // Key for storing the current challenge number
 const CHALLENGE_NUMBER_KEY = 'doubleFeature_challengeNumber';
 const LAST_YEAR_KEY = 'doubleFeature_lastYear';
@@ -130,7 +137,7 @@ export const useDailyYear = (): DailyYearResult => {
         }
         
         // Get archive data to determine challenge number
-        let archiveData = [];
+        let archiveData: Array<ArchiveEntry> = [];
         try {
           archiveData = await getArchiveData();
         } catch (archiveDataError) {
