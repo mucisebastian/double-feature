@@ -7,9 +7,10 @@ interface ShareResultsProps {
   dailyYear: number;
   movieGuesses: { title: string; correct: boolean }[];
   albumGuesses: { title: string; correct: boolean }[];
+  isArchiveGame?: boolean;
 }
 
-export default function ShareResults({ dailyYear, movieGuesses, albumGuesses }: ShareResultsProps) {
+export default function ShareResults({ dailyYear, movieGuesses, albumGuesses, isArchiveGame = false }: ShareResultsProps) {
   const [copied, setCopied] = useState(false);
   
   // Calculate statistics
@@ -44,7 +45,8 @@ export default function ShareResults({ dailyYear, movieGuesses, albumGuesses }: 
   
   // Generate share text
   const generateShareText = () => {
-    return `Double Feature (${dateString}) - ${dailyYear}\n\n` +
+    const gameType = isArchiveGame ? 'Double Feature Archive' : 'Double Feature';
+    return `${gameType} (${dateString}) - ${dailyYear}\n\n` +
            `🎬 Movie: ${generateEmojiGrid(movieGuesses)} ${movieSuccess ? movieAttempts : 'X'}/${movieGuesses.length}\n` +
            `🎵 Album: ${generateEmojiGrid(albumGuesses)} ${albumSuccess ? albumAttempts : 'X'}/${albumGuesses.length}\n\n` +
            `Play at: https://doublefeature.app`;

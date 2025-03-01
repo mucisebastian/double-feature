@@ -1,17 +1,14 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import YearValidator from '@/components/YearValidator'
 
 // Initialize Inter font
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-})
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Double Feature',
-  description: 'A daily movie and album guessing game',
+  description: 'Guess a movie and album from the same year',
 }
 
 export default function RootLayout({
@@ -20,11 +17,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className={`font-sans min-h-screen bg-white text-black ${inter.className}`}>
-        <main className="min-h-screen">
-          {children}
-        </main>
+    <html lang="en">
+      <body className={inter.className}>
+        {children}
+        <YearValidator />
       </body>
     </html>
   )

@@ -265,7 +265,7 @@ export default function AlbumSearch({ dailyYear, onGuess, disabled = false, gues
             <span className="font-medium">
               {guesses.find(guess => guess.correct)?.title}
             </span>
-            <span className="text-green-500">✓</span>
+            <span className="text-green-500">✔️</span>
           </div>
         </div>
       )}

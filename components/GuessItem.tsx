@@ -26,7 +26,7 @@ export function GuessItem({ guess, isCorrect, message }: GuessItemProps) {
             isCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
           }`}
         >
-          {isCorrect ? '✓' : '✗'}
+          {isCorrect ? '✔️' : '✗'}
         </div>
         <span className="font-medium">{guess}</span>
       </div>

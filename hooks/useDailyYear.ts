@@ -1,148 +1,141 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { generateNewDailyYear, getArchiveData } from '@/utils/archiveManager';
+import { useSearchParams } from 'next/navigation';
+import { 
+  getArchiveData, 
+  getTodaysYear, 
+  checkDailyReset, 
+  getYearForDate,
+  validateTodaysYear,
+  getArchiveYears,
+  performDailyValidation
+} from '@/utils/archiveManager';
+import { format, parseISO } from 'date-fns';
+import { verifyYearUniqueness } from '@/utils/yearGenerator';
 
-// Define the range of years to use for challenges
-const MIN_YEAR = 1960;
-const MAX_YEAR = 2020;
-const STORAGE_KEY = 'doubleFeature_dailyYear';
-
-interface UseDailyYearResult {
+interface DailyYearResult {
   dailyYear: number | null;
-  timeUntilReset: string;
+  today: Date | null;
   isLoading: boolean;
   error: string | null;
+  challengeNumber: number | null;
+  isArchiveGame: boolean;
+  archiveDate: string | null;
+  isYearUnique: boolean;
 }
 
-export function useDailyYear(): UseDailyYearResult {
+export const useDailyYear = (): DailyYearResult => {
   const [dailyYear, setDailyYear] = useState<number | null>(null);
-  const [timeUntilReset, setTimeUntilReset] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [today, setToday] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [challengeNumber, setChallengeNumber] = useState<number | null>(null);
+  const [isArchiveGame, setIsArchiveGame] = useState(false);
+  const [archiveDate, setArchiveDate] = useState<string | null>(null);
+  const [isYearUnique, setIsYearUnique] = useState(true);
+  
+  const searchParams = useSearchParams();
 
-  // Generate a deterministic year based on the current date
-  const generateDailyYear = () => {
-    try {
-      // Get current date in UTC
-      const now = new Date();
-      const utcDay = now.getUTCDate();
-      const utcMonth = now.getUTCMonth();
-      const utcYear = now.getUTCFullYear();
-      
-      // Create a date string in format YYYY-MM-DD for consistent hashing
-      const dateString = `${utcYear}-${utcMonth + 1}-${utcDay}`;
-      
-      // Create a simple hash from the date string
-      let hash = 0;
-      for (let i = 0; i < dateString.length; i++) {
-        hash = ((hash << 5) - hash) + dateString.charCodeAt(i);
-        hash |= 0; // Convert to 32bit integer
-      }
-      
-      // Use the hash to generate a year within our range
-      const yearRange = MAX_YEAR - MIN_YEAR + 1;
-      const yearOffset = Math.abs(hash) % yearRange;
-      const generatedYear = MIN_YEAR + yearOffset;
-      
-      return generatedYear;
-    } catch (err) {
-      console.error('Error generating daily year:', err);
-      // Fallback to a random year if something goes wrong
-      return MIN_YEAR + Math.floor(Math.random() * (MAX_YEAR - MIN_YEAR + 1));
-    }
-  };
-
-  // Calculate time until next reset (midnight UTC)
-  const calculateTimeUntilReset = () => {
-    const now = new Date();
-    const tomorrow = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
-      0, 0, 0, 0
-    ));
-    
-    const diffMs = tomorrow.getTime() - now.getTime();
-    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    return `${diffHrs}h ${diffMins}m`;
-  };
-
-  // Update the time until reset every minute
   useEffect(() => {
-    const updateTimeUntilReset = () => {
-      setTimeUntilReset(calculateTimeUntilReset());
-    };
-    
-    // Initial calculation
-    updateTimeUntilReset();
-    
-    // Update every minute
-    const interval = setInterval(updateTimeUntilReset, 60000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  // Load or generate the daily year
-  useEffect(() => {
-    const loadDailyYear = () => {
-      setIsLoading(true);
-      
+    const fetchDailyYear = async () => {
       try {
-        if (typeof window === 'undefined') {
-          // For SSR, just use a placeholder
-          setDailyYear(2000);
-          setIsLoading(false);
-          return;
-        }
+        setIsLoading(true);
         
-        // Check if we have a stored year and date
-        const storedData = localStorage.getItem(STORAGE_KEY);
+        // Check if we need to reset the daily challenge
+        checkDailyReset();
         
-        if (storedData) {
-          const { year, date } = JSON.parse(storedData);
+        // Get current date
+        const currentDate = new Date();
+        setToday(currentDate);
+        
+        // Check if we're playing an archive challenge
+        const dateParam = searchParams?.get('date');
+        const yearParam = searchParams?.get('year');
+        
+        if (dateParam) {
+          // This is an archive game
+          setIsArchiveGame(true);
+          setArchiveDate(dateParam);
           
-          // Check if the stored date is still today (in UTC)
-          const now = new Date();
-          const today = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}`;
-          
-          if (date === today) {
-            // Use the stored year if it's still the same day
+          if (yearParam) {
+            // If year is provided in URL, use it
+            setDailyYear(parseInt(yearParam));
+          } else {
+            // Otherwise, calculate it
+            const archiveDate = new Date(dateParam);
+            const year = getYearForDate(archiveDate);
             setDailyYear(year);
-            setIsLoading(false);
-            return;
+          }
+          
+          // Set today to the archive date for display purposes
+          setToday(new Date(dateParam));
+          
+          // Archive games are always valid
+          setIsYearUnique(true);
+        } else {
+          // This is today's challenge
+          setIsArchiveGame(false);
+          setArchiveDate(null);
+          
+          // Perform daily validation check
+          const validationPassed = await performDailyValidation();
+          
+          if (!validationPassed) {
+            // If validation fails, show an error but continue with the game
+            console.error('Daily validation failed: Year may be a duplicate');
+            // We don't set an error message to avoid disrupting the user experience
+          }
+          
+          // Get today's challenge year
+          const year = getTodaysYear();
+          setDailyYear(year);
+          
+          // Validate that today's year doesn't exist in the archive
+          const archiveYears = getArchiveYears();
+          const isUnique = verifyYearUniqueness(year, archiveYears);
+          setIsYearUnique(isUnique);
+          
+          if (!isUnique) {
+            console.error('Today\'s year already exists in the archive!', year);
+            // We still show the game, but log the error
           }
         }
         
-        // Generate a new year for today
-        const newYear = generateDailyYear();
-        const now = new Date();
-        const today = `${now.getUTCFullYear()}-${now.getUTCMonth() + 1}-${now.getUTCDate()}`;
+        // Get archive data to determine challenge number
+        const archiveData = await getArchiveData();
         
-        // Store the new year and date
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({ year: newYear, date: today }));
+        // Calculate challenge number
+        if (!isArchiveGame) {
+          // For today's challenge, it's the total number of challenges so far
+          setChallengeNumber(archiveData.length + 1);
+        } else if (archiveDate) {
+          // For archive challenges, find its position in the archive
+          const index = archiveData.findIndex(entry => entry.date === archiveDate);
+          if (index !== -1) {
+            setChallengeNumber(archiveData.length - index);
+          }
+        }
         
-        setDailyYear(newYear);
+        setIsLoading(false);
       } catch (err) {
-        console.error('Error loading daily year:', err);
-        setError('Failed to generate today\'s challenge. Please refresh the page.');
-        
-        // Fallback to a random year
-        setDailyYear(MIN_YEAR + Math.floor(Math.random() * (MAX_YEAR - MIN_YEAR + 1)));
-      } finally {
+        console.error('Error fetching daily year:', err);
+        setError('Failed to generate daily year. Please try again.');
         setIsLoading(false);
       }
     };
-    
-    loadDailyYear();
-  }, []);
 
-  return {
-    dailyYear,
-    timeUntilReset,
-    isLoading,
-    error
+    fetchDailyYear();
+  }, [searchParams, isArchiveGame, archiveDate]);
+
+  return { 
+    dailyYear, 
+    today, 
+    isLoading, 
+    error, 
+    challengeNumber, 
+    isArchiveGame, 
+    archiveDate,
+    isYearUnique
   };
-} 
+}; 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getLocalStorage, setLocalStorage } from '@/utils/localStorage';
+import { getTodaysYear } from '@/utils/archiveManager';
 
 // Define the GameData interface
 export interface GameData {
@@ -9,13 +9,12 @@ export interface GameData {
   popularAlbums?: string[];
 }
 
-export function useGameData(yearOverride?: number | null) {
+export function useGameData(yearOverride?: number | null, dateOverride?: string | null) {
   const [data, setData] = useState<GameData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('useGameData effect running');
     let isMounted = true;
     
     const fetchData = async () => {
@@ -26,37 +25,23 @@ export function useGameData(yearOverride?: number | null) {
         if (yearOverride) {
           console.log('Using year override:', yearOverride);
           if (isMounted) {
-            setData({ year: yearOverride });
+            setData({ 
+              year: yearOverride,
+              date: dateOverride || new Date().toISOString().split('T')[0]
+            });
             setLoading(false);
           }
           return;
         }
         
-        // Check for cached data first
+        // Get today's year from the archive manager
+        const todaysYear = getTodaysYear();
         const today = new Date().toISOString().split('T')[0];
-        const cachedData = getLocalStorage(`gameData_${today}`, null);
-        
-        if (cachedData) {
-          console.log('Using cached data:', cachedData);
-          if (isMounted) {
-            setData(cachedData);
-            setLoading(false);
-          }
-          return;
-        }
-        
-        // Generate a random year between 1960 and 2020
-        // In a real app, this would come from an API
-        const randomYear = Math.floor(Math.random() * (2020 - 1960 + 1)) + 1960;
-        console.log('Generated random year:', randomYear);
         
         const newData = { 
-          year: randomYear,
+          year: todaysYear,
           date: today
         };
-        
-        // Cache the data
-        setLocalStorage(`gameData_${today}`, newData);
         
         if (isMounted) {
           setData(newData);
@@ -81,7 +66,7 @@ export function useGameData(yearOverride?: number | null) {
       isMounted = false;
       clearTimeout(timeoutId);
     };
-  }, [yearOverride]);
+  }, [yearOverride, dateOverride]);
 
   return { data, loading, error };
 } 

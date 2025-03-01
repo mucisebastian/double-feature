@@ -1,4 +1,5 @@
 'use client';
+
 import { Component, ErrorInfo, ReactNode } from 'react';
 
 interface Props {
@@ -8,13 +9,23 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  error: Error | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  state = { hasError: false };
+  constructor(props: Props) {
+    super(props);
+    this.state = { 
+      hasError: false,
+      error: null
+    };
+  }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    return { 
+      hasError: true,
+      error
+    };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -22,8 +33,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   render() {
-    return this.state.hasError ? this.props.fallback : this.props.children;
-  }
-}
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
 
-export default ErrorBoundary; 
+    return this.props.children;
+  }
+} 

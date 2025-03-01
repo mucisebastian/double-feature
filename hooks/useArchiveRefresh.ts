@@ -1,16 +1,16 @@
 import { useEffect } from 'react';
-import { generateNewDailyYear } from '@/utils/archiveManager';
+import { checkDailyReset } from '@/utils/archiveManager';
 
 export const useArchiveRefresh = () => {
   useEffect(() => {
     // Initial check
-    generateNewDailyYear();
+    checkDailyReset();
 
     // Check every minute for midnight
     const checkMidnight = () => {
       const now = new Date();
       if (now.getHours() === 0 && now.getMinutes() === 0) {
-        generateNewDailyYear();
+        checkDailyReset();
         window.location.reload();
       }
     };
