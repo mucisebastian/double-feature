@@ -69,6 +69,9 @@ export const useDailyYear = (): DailyYearResult => {
         const dateParam = searchParams?.get('date');
         const yearParam = searchParams?.get('year');
         
+        // Variable to store the year for this challenge
+        let challengeYear: number;
+        
         if (dateParam) {
           // This is an archive game
           setIsArchiveGame(true);
@@ -77,17 +80,19 @@ export const useDailyYear = (): DailyYearResult => {
           try {
             if (yearParam) {
               // If year is provided in URL, use it
-              setDailyYear(parseInt(yearParam));
+              challengeYear = parseInt(yearParam);
+              setDailyYear(challengeYear);
             } else {
               // Otherwise, calculate it
               const archiveDate = new Date(dateParam);
-              const year = getYearForDate(archiveDate);
-              setDailyYear(year);
+              challengeYear = getYearForDate(archiveDate);
+              setDailyYear(challengeYear);
             }
           } catch (archiveError) {
             console.error('Error getting archive year:', archiveError);
             // Fallback to a default year for archive games
-            setDailyYear(2000);
+            challengeYear = 2000;
+            setDailyYear(challengeYear);
           }
           
           // Set today to the archive date for display purposes
@@ -109,24 +114,23 @@ export const useDailyYear = (): DailyYearResult => {
           }
           
           // Get today's challenge year with fallback
-          let year;
           try {
-            year = getTodaysYear();
+            challengeYear = getTodaysYear();
           } catch (yearError) {
             console.error('Error getting today\'s year:', yearError);
             // Fallback to a random year between 1970 and 2020
-            year = 1970 + Math.floor(Math.random() * 51);
+            challengeYear = 1970 + Math.floor(Math.random() * 51);
           }
-          setDailyYear(year);
+          setDailyYear(challengeYear);
           
           // Validate that today's year doesn't exist in the archive
           try {
             const archiveYears = getArchiveYears();
-            const isUnique = verifyYearUniqueness(year, archiveYears);
+            const isUnique = verifyYearUniqueness(challengeYear, archiveYears);
             setIsYearUnique(isUnique);
             
             if (!isUnique) {
-              console.error('Today\'s year already exists in the archive!', year);
+              console.error('Today\'s year already exists in the archive!', challengeYear);
               // We still show the game, but log the error
             }
           } catch (uniqueError) {
@@ -156,13 +160,13 @@ export const useDailyYear = (): DailyYearResult => {
               let currentChallengeNumber = storedChallengeNumber ? parseInt(storedChallengeNumber) : 14;
               
               // If the year has changed since last time, increment the challenge number
-              if (storedLastYear && storedLastYear !== String(year)) {
+              if (storedLastYear && storedLastYear !== String(challengeYear)) {
                 currentChallengeNumber += 1;
                 localStorage.setItem(CHALLENGE_NUMBER_KEY, String(currentChallengeNumber));
               }
               
               // Store the current year for next comparison
-              localStorage.setItem(LAST_YEAR_KEY, String(year));
+              localStorage.setItem(LAST_YEAR_KEY, String(challengeYear));
               
               setChallengeNumber(currentChallengeNumber);
             } catch (storageError) {
