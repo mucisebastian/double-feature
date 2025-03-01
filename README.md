@@ -40,7 +40,7 @@ A daily challenge game where players guess a movie and an album from the same ye
    npm run dev
    ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+5. Open [(https://doublefeature.app/)](https://doublefeature.app/)] in your browser
 
 ## Deployment
 
