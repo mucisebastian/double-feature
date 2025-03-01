@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useReducer, Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import { default as dynamicImport } from 'next/dynamic';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import useDailyYear from '@/hooks/useDailyYear';
@@ -13,10 +13,10 @@ import { format } from 'date-fns';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Only dynamically import ShareResults as it's only needed at the end of the game
-const ShareResults = dynamic(() => import('@/components/ShareResults'));
+const ShareResults = dynamicImport(() => import('@/components/ShareResults'));
 
 // Force dynamic rendering to handle useSearchParams
-export const dynamicRendering = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 // Game state types and reducer
 type GameState = {

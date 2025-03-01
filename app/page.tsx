@@ -7,7 +7,7 @@ import { formatDate } from '@/utils/dateUtils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Force dynamic rendering to handle useSearchParams
-export const dynamicRendering = 'force-dynamic';
+export const dynamic = 'force-dynamic';
 
 export default function HomePage() {
   return (
